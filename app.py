@@ -30,15 +30,16 @@ def refresh_data():
     gold_usd = float(requests.get(GOLD_URL).json()["price"])
     usdkrw = float(requests.get(FX_URL).json()["rates"]["KRW"])
 
-    # базовая цена (без маржи)
     silver_base = (silver_usd * usdkrw) / OZ_TO_GRAM
     gold_base = (gold_usd * usdkrw) / OZ_TO_GRAM
 
-    # цена с маржой
+    # apply profit margin
     cache["silver"] = silver_base * (1 + MARGIN)
     cache["gold"] = gold_base * (1 + MARGIN)
+
     cache["usdkrw"] = usdkrw
     cache["updated"] = time.time()
+
 
 def get_data():
     if time.time() - cache["updated"] > CACHE_TTL:
