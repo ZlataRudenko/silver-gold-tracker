@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="900" />
+  <title>Silver & Gold Prices (KRW)</title>
+
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#0f1b33;
+      --card:#0f172a;
+      --line:rgba(255,255,255,.08);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+      --soft:rgba(255,255,255,.10);
+      --shadow: 0 18px 60px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans";
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(120,119,198,.35), transparent 55%),
+        radial-gradient(900px 500px at 80% 20%, rgba(34,211,238,.25), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:26px;
+    }
+
+    .wrap{
+      width:100%;
+      max-width:860px;
+    }
+
+    .header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:16px;
+    }
+
+    .title{
+      font-size:28px;
+      font-weight:800;
+      letter-spacing:.2px;
+      margin:0;
+    }
+    .subtitle{
+      margin:6px 0 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.4;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#22c55e;
+      box-shadow: 0 0 0 6px rgba(34,197,94,.12);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    @media (max-width:720px){
+      .grid{ grid-template-columns:1fr; }
+      .header{ flex-direction:column; align-items:flex-start; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      padding:18px;
+      position:relative;
+      overflow:hidden;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(220px 140px at 20% 0%, rgba(255,255,255,.14), transparent 60%);
+      pointer-events:none;
+    }
+
+    .label{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+      position:relative;
+    }
+    .metal{
+     display:flex;
+     align-items:center;
+     gap:12px;
+     font-weight:900;
+     letter-spacing:.4px;
+     font-size:22px;        /* ⬅ размер названия металла */
+     text-transform:uppercase;
+    }
+    .badge{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .value{
+      position:relative;
+      font-size:34px;
+      font-weight:900;
+      letter-spacing:.4px;
+      line-height:1.1;
+      margin:0;
+    }
+    .unit{
+      font-size:14px;
+      color:var(--muted);
+      margin-top:8px;
+    }
+
+    .meta{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px dashed var(--line);
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:13px;
+      position:relative;
+    }
+    .meta span{
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      padding:6px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(255,255,255,.03);
+    }
+
+    .icon{
+      width:18px;
+      height:18px;
+      display:inline-grid;
+      place-items:center;
+      border-radius:6px;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      font-size:12px;
+    }
+
+    .footer{
+      margin-top:14px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:12px;
+      opacity:.95;
+    }
+
+    a{ color:inherit; text-decoration:none; border-bottom:1px dotted rgba(255,255,255,.35); }
+    a:hover{ opacity:.9; }
+
+    /* Слегка “цифровой” вид, чтобы цены выглядели дорого */
+    .mono{ font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="header">
+      <div>
+        <h1 class="title">Silver & Gold Prices</h1>
+        <p class="subtitle">
+        Prices shown already include a 25% profit margin on top of live market data. 
+        </p>
+      </div>
+
+      <div class="pill">
+        <span class="dot"></span>
+        <span>Live</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- SILVER -->
+      <div class="card">
+        <div class="label">
+          <div class="metal">
+            <span class="icon">Ag</span>
+            <span>Silver</span>
+          </div>
+          <span class="badge">KRW per gram</span>
+        </div>
+
+        <p class="value mono">{{ silver }} <span style="font-size:16px; font-weight:700; color:rgba(255,255,255,.75);">KRW</span></p>
+        <div class="unit">/ g</div>
+
+        <div class="meta">
+          <span><span class="icon">₩</span> USD→KRW: <strong class="mono">{{ usdkrw }}</strong></span>
+          <span><span class="icon">⏱</span> Updated: <strong class="mono">{{ updated }}</strong></span>
+        </div>
+      </div>
+
+      <!-- GOLD -->
+      <div class="card">
+        <div class="label">
+          <div class="metal">
+            <span class="icon">Au</span>
+            <span>Gold</span>
+          </div>
+          <span class="badge">KRW per gram</span>
+        </div>
+
+        <p class="value mono">{{ gold }} <span style="font-size:22px; font-weight:700; color:rgba(255,255,255,.75);">KRW</span></p>
+        <div class="unit">/ g</div>
+
+        <div class="meta">
+          <span><span class="icon">₩</span> USD→KRW: <strong class="mono">{{ usdkrw }}</strong></span>
+          <span><span class="icon">⏱</span> Updated: <strong class="mono">{{ updated }}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Auto-refresh: 15 minutes</div>
+      <div>API: <a href="/api/prices" target="_blank">/api/prices</a></div>
+    </div>
+
+  </div>
+</body>
+</html>
