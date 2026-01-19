@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="wrap">
+  <h1 class="title">Private chat</h1>
+  <p class="subtitle">
+    {{ listing.type|upper }} · {{ listing.metal|capitalize }} · {{ listing.amount }} g
+  </p>
+
+  <div class="card">
+    {% if messages|length == 0 %}
+      <p class="subtitle">No messages yet.</p>
+    {% endif %}
+
+    {% for m in messages %}
+      <div style="margin-bottom:10px;">
+        <strong>{{ m.sender_alias }}:</strong>
+        <span>{{ m.text }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <form method="post" action="/thread/{{ thread.thread_id }}/send" style="margin-top:16px;">
+    <input type="text" name="text" placeholder="Type your message..." required style="width:80%">
+    <button type="submit">Send</button>
+  </form>
+
+</div>
+{% endblock %}

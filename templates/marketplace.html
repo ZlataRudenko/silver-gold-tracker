@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1 class="title">Marketplace</h1>
+      <p class="subtitle">Anonymous buy/sell requests. No contacts are shown publicly.</p>
+    </div>
+    <a href="/post" class="pill" style="text-decoration:none;">
+      <span class="dot"></span><span>Post request</span>
+    </a>
+  </div>
+
+  {% if listings|length == 0 %}
+    <div class="card">
+      <p class="subtitle">No active requests yet.</p>
+    </div>
+  {% endif %}
+
+  <div class="grid">
+    {% for x in listings %}
+      <div class="card">
+        <div class="label">
+          <div class="metal">
+            <span class="icon">{{ "S" if x.type=="sell" else "B" }}</span>
+            <span>{{ x.type|upper }}</span>
+          </div>
+          <span class="badge">{{ x.metal|capitalize }}</span>
+        </div>
+
+        <p class="value mono" style="font-size:22px;">
+          {{ x.amount }} {{ x.unit }}
+        </p>
+        <div class="unit">
+          Alias: <strong class="mono">{{ x.alias }}</strong>
+          {% if x.location %} · {{ x.location }}{% endif %}
+        </div>
+
+        <div class="meta">
+          <span>Purity: <strong class="mono">{{ x.purity if x.purity else "-" }}</strong></span>
+          <span>Posted: <strong class="mono">{{ x.created_at }}</strong></span>
+        </div>
+
+        <div style="margin-top:12px;">
+          <a href="/listing/{{ x.id }}">Open</a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

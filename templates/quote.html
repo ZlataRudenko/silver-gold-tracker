@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1 class="title">Quick Quote</h1>
+      <p class="subtitle">Generate a clean quote text you can copy and send instantly.</p>
+    </div>
+
+    <div class="pill">
+      <span class="dot"></span>
+      <span>Live prices</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">
+      <div class="metal">
+        <span class="icon">⚡</span>
+        <span>Quote builder</span>
+      </div>
+      <span class="badge">Copy-ready</span>
+    </div>
+
+    {% if error %}
+      <p style="color:#ff6b6b; margin: 0 0 12px 0;">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="/quote" style="display:grid; gap:12px; max-width: 760px;">
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div>
+          <label style="color:var(--muted); font-size:13px;">Metal</label><br>
+          <select name="metal"
+                  style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
+            <option value="silver" {% if metal=='silver' %}selected{% endif %}>Silver</option>
+            <option value="gold" {% if metal=='gold' %}selected{% endif %}>Gold</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="color:var(--muted); font-size:13px;">Preset</label><br>
+          <!-- Presets are optional; we just auto-fill amount/unit via JS -->
+          <select id="preset"
+                  style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
+            <option value="">— choose (optional) —</option>
+            <option value="silver|1000|g">Silver 1 kg (1000 g)</option>
+            <option value="silver|500|g">Silver 500 g</option>
+            <option value="silver|250|g">Silver 250 g</option>
+            <option value="gold|1|g">Gold 1 g</option>
+            <option value="gold|5|g">Gold 5 g</option>
+            <option value="gold|10|g">Gold 10 g</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px; align-items:end;">
+        <div>
+          <label style="color:var(--muted); font-size:13px;">Amount</label><br>
+          <input id="amount" type="number" name="amount" step="0.01" required
+                 value="{{ amount if amount is not none else '' }}"
+                 style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
+        </div>
+
+        <div>
+          <label style="color:var(--muted); font-size:13px;">Unit</label><br>
+          <select id="unit" name="unit"
+                  style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
+            <option value="g" {% if unit=='g' %}selected{% endif %}>grams</option>
+            <option value="kg" {% if unit=='kg' %}selected{% endif %}>kilograms</option>
+            <option value="oz" {% if unit=='oz' %}selected{% endif %}>ounces</option>
+          </select>
+        </div>
+
+        <div>
+          <button type="submit"
+                  style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.08); color:var(--text); font-weight:800; cursor:pointer;">
+            Generate
+          </button>
+        </div>
+      </div>
+
+    </form>
+
+    {% if estimate is not none %}
+      <div class="meta" style="margin-top:16px;">
+        <span><span class="icon">₩</span> Used price: <strong class="mono">{{ price_per_gram }}</strong> KRW / g</span>
+        {% if usdkrw is not none %}
+          <span><span class="icon">₩</span> USD→KRW: <strong class="mono">{{ usdkrw }}</strong></span>
+        {% endif %}
+        {% if used_at %}
+          <span><span class="icon">⏱</span> Timestamp: <strong class="mono">{{ used_at }}</strong></span>
+        {% endif %}
+      </div>
+
+      <p class="value mono" style="margin-top:16px;">
+        {{ estimate }} <span style="font-size:16px; font-weight:700; color:rgba(255,255,255,.75);">KRW</span>
+      </p>
+      <div class="unit">Estimated total</div>
+
+      <div style="margin-top:16px;">
+        <label style="color:var(--muted); font-size:13px;">Copy text</label><br>
+        <textarea id="quoteText" rows="6" readonly
+                  style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text); resize:vertical; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, 'Noto Sans';">{{ quote_text }}</textarea>
+
+        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+          <button type="button" id="copyBtn"
+                  style="padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.10); color:var(--text); font-weight:800; cursor:pointer;">
+            Copy
+          </button>
+
+          <span id="copyMsg" style="color:rgba(255,255,255,.75); align-self:center;"></span>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+
+  <div class="footer">
+    <div>Tip: use presets for instant weights.</div>
+    <div>Prices via <a href="/api/prices" target="_blank">/api/prices</a></div>
+  </div>
+
+</div>
+
+<script>
+  // Presets: auto-fill metal, amount, unit
+  const presetEl = document.getElementById('preset');
+  const amountEl = document.getElementById('amount');
+  const unitEl = document.getElementById('unit');
+  const metalSelect = document.querySelector('select[name="metal"]');
+
+  if (presetEl) {
+    presetEl.addEventListener('change', () => {
+      const v = presetEl.value;
+      if (!v) return;
+      const [metal, amount, unit] = v.split('|');
+      if (metalSelect) metalSelect.value = metal;
+      if (amountEl) amountEl.value = amount;
+      if (unitEl) unitEl.value = unit;
+    });
+  }
+
+  // Copy button
+  const copyBtn = document.getElementById('copyBtn');
+  const quoteText = document.getElementById('quoteText');
+  const copyMsg = document.getElementById('copyMsg');
+
+  if (copyBtn && quoteText) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(quoteText.value);
+        if (copyMsg) copyMsg.textContent = "Copied ✅";
+        setTimeout(() => { if (copyMsg) copyMsg.textContent = ""; }, 2000);
+      } catch (e) {
+        // Fallback
+        quoteText.select();
+        document.execCommand('copy');
+        if (copyMsg) copyMsg.textContent = "Copied ✅";
+        setTimeout(() => { if (copyMsg) copyMsg.textContent = ""; }, 2000);
+      }
+    });
+  }
+</script>
+{% endblock %}

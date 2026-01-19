@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title or "Silver & Gold" }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+  <!-- TOP NAV (same style as index) -->
+  <div class="topnav">
+    <div class="nav-inner">
+      <a href="/" class="{{ 'active' if active_page=='prices' else '' }}">Prices</a>
+      <a href="/calculator" class="{{ 'active' if active_page=='calculator' else '' }}">Calculator</a>
+      <a href="/quote" class="{{ 'active' if active_page=='quote' else '' }}">Quick Quote</a>
+      <a href="/marketplace">Marketplace</a>
+      <a href="/inbox">Inbox</a>
+      <a href="/inquiry" class="{{ 'active' if active_page=='inquiry' else '' }}">Inquiry</a>
+      <a href="/sell" class="{% if active_page=='sell' %}active{% endif %}">Sell</a>
+    </div>
+  </div>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+</body>
+
+</html>

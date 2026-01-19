@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="wrap">
+  <div class="header">
+    <div>
+      <h1 class="title">Listing</h1>
+      <p class="subtitle">Details of the request.</p>
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  {% if listing %}
+    <div class="card">
+      <div class="row">
+        <div class="badge">{{ listing.type|upper }}</div>
+        <div class="badge">{{ listing.metal|capitalize }}</div>
+      </div>
+
+      <h2 class="big">{{ "%.2f"|format(listing.amount) }} {{ listing.unit }}</h2>
+
+      <div class="muted">Alias: {{ listing.alias }}</div>
+      <div class="muted">Purity: {{ listing.purity or "-" }}</div>
+      <div class="muted">Location: {{ listing.location or "-" }}</div>
+
+      {% if listing.message %}
+        <hr />
+        <div class="muted">Message:</div>
+        <div>{{ listing.message }}</div>
+      {% endif %}
+
+      <hr />
+
+      <div class="row">
+        <a class="btn" href="/marketplace">← Back</a>
+
+        <!-- next step: Contact button will create private thread -->
+       <form method="post" action="/listing/{{ listing.id }}/contact">
+           <button type="submit">Contact</button>
+       </form>
+
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

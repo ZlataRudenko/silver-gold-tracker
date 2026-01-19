@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="wrap">
+  <div class="card" style="max-width:520px; margin:0 auto;">
+
+    <h1 class="title" style="margin-bottom:10px;">Post request</h1>
+    <p class="subtitle">Your request will be shown publicly without contact details.</p>
+
+    <form method="post" action="/post">
+
+      <label class="subtitle">Type</label>
+      <select name="type">
+        <option value="buy">BUY</option>
+        <option value="sell">SELL</option>
+      </select>
+
+      <label class="subtitle" style="margin-top:12px;">Metal</label>
+      <select name="metal">
+        <option value="silver">Silver</option>
+        <option value="gold">Gold</option>
+      </select>
+
+      <label class="subtitle" style="margin-top:12px;">Unit</label>
+      <select name="unit">
+        <option value="g">grams</option>
+        <option value="kg">kilograms</option>
+        <option value="oz">ounces</option>
+      </select>
+
+      <label class="subtitle" style="margin-top:12px;">Amount</label>
+      <input type="number" name="amount" step="0.01" required>
+
+      <label class="subtitle" style="margin-top:12px;">Purity (optional)</label>
+      <input type="text" name="purity" placeholder="e.g. 999 / 24K">
+
+      <label class="subtitle" style="margin-top:12px;">Location (optional)</label>
+      <input type="text" name="location" placeholder="e.g. Seoul">
+
+      <label class="subtitle" style="margin-top:12px;">Note (optional)</label>
+      <textarea name="note" rows="3" placeholder="Any details…"></textarea>
+
+      <button type="submit" style="margin-top:16px;">Publish</button>
+
+      {% if error %}
+        <p style="color:#f87171; margin-top:12px;">{{ error }}</p>
+      {% endif %}
+    </form>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="wrap">
+  <div class="card" style="max-width:420px; margin:0 auto;">
+
+    <h1 class="title" style="margin-bottom:16px;">Calculator</h1>
+
+    <form method="post" action="/calculator">
+
+      <label class="subtitle">Metal</label>
+      <select name="metal">
+        <option value="silver" {% if metal=='silver' %}selected{% endif %}>Silver</option>
+        <option value="gold" {% if metal=='gold' %}selected{% endif %}>Gold</option>
+      </select>
+
+      <label class="subtitle" style="margin-top:12px;">Unit</label>
+      <select name="unit">
+        <option value="g" {% if unit=='g' %}selected{% endif %}>grams</option>
+        <option value="kg" {% if unit=='kg' %}selected{% endif %}>kilograms</option>
+        <option value="oz" {% if unit=='oz' %}selected{% endif %}>ounces</option>
+      </select>
+
+      <label class="subtitle" style="margin-top:12px;">Amount</label>
+      <input type="number" name="amount" step="0.01" required
+             value="{{ amount if amount is not none else '' }}">
+
+      <button type="submit" style="margin-top:16px;">Calculate</button>
+
+      {% if error %}
+        <p style="color:#f87171; margin-top:12px;">{{ error }}</p>
+      {% endif %}
+    </form>
+
+    {% if price_per_gram is not none %}
+      <div class="meta" style="margin-top:14px;">
+        <span>Using price: <strong>{{ price_per_gram }}</strong> KRW / g</span>
+      </div>
+    {% endif %}
+
+    {% if result is not none %}
+      <p class="value mono" style="margin-top:18px;">
+        {{ result }} <span style="font-size:16px;">KRW</span>
+      </p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
