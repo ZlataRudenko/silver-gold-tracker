@@ -22,26 +22,29 @@
       </select>
 
       <label class="subtitle" style="margin-top:12px;">Amount</label>
-      <input type="number" name="amount" step="0.01" required
-             value="{{ amount if amount is not none else '' }}">
+      <input type="number" name="amount" step="0.01" required value="{{ amount if amount is not none else '' }}">
+
+      <label class="subtitle" style="margin-top:12px;">Margin (%)</label>
+      <input type="number" name="margin_percent" step="0.1" min="0" max="100"
+        value="{{ margin_percent if margin_percent is not none else 0 }}">
 
       <button type="submit" style="margin-top:16px;">Calculate</button>
 
       {% if error %}
-        <p style="color:#f87171; margin-top:12px;">{{ error }}</p>
+      <p style="color:#f87171; margin-top:12px;">{{ error }}</p>
       {% endif %}
     </form>
 
     {% if price_per_gram is not none %}
-      <div class="meta" style="margin-top:14px;">
-        <span>Using price: <strong>{{ price_per_gram }}</strong> KRW / g</span>
-      </div>
+    <div class="meta" style="margin-top:14px;">
+      <span>Using price: <strong>{{ price_per_gram }}</strong> KRW / g</span>
+    </div>
     {% endif %}
 
     {% if result is not none %}
-      <p class="value mono" style="margin-top:18px;">
-        {{ result }} <span style="font-size:16px;">KRW</span>
-      </p>
+    <p class="value mono" style="margin-top:18px;">
+      {{ result }} <span style="font-size:16px;">KRW</span>
+    </p>
     {% endif %}
 
   </div>

@@ -68,9 +68,10 @@
           <label style="color:var(--muted); font-size:13px;">Unit</label><br>
           <select id="unit" name="unit"
                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
-            <option value="g" {% if unit=='g' %}selected{% endif %}>grams</option>
-            <option value="kg" {% if unit=='kg' %}selected{% endif %}>kilograms</option>
-            <option value="oz" {% if unit=='oz' %}selected{% endif %}>ounces</option>
+            <option value="g" {% if unit=='g' %}selected{% endif %}>{{ t("unit.g") }}</option>
+            <option value="kg" {% if unit=='kg' %}selected{% endif %}>{{ t("unit.kg") }}</option>
+            <option value="oz" {% if unit=='oz' %}selected{% endif %}>{{ t("unit.oz") }}</option>
+            <option value="don" {% if unit=='don' %}selected{% endif %}>{{ t("unit.don") }}</option>
           </select>
         </div>
 

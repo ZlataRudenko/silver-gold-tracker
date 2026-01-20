@@ -4,13 +4,14 @@
 <div class="wrap">
   <div class="header">
     <div>
-      <h1 class="title">Silver & Gold Prices</h1>
-      <p class="subtitle">Prices shown are final selling prices</p>
+      <h1 class="title">{{ t("page.prices.title") }}</h1>
+      <p class="subtitle">{{ t("page.prices.subtitle") }}</p>
+
     </div>
 
     <div class="pill">
       <span class="dot"></span>
-      <span>Live</span>
+      <span>{{ t("common.live") }}</span>
     </div>
   </div>
 
@@ -20,9 +21,9 @@
       <div class="label">
         <div class="metal">
           <span class="icon">Ag</span>
-          <span>Silver</span>
+          <span>{{ t("metal.silver") }}</span>
         </div>
-        <span class="badge">KRW per gram</span>
+        <span class="badge">{{ t("page.prices.krw_per_gram") }}</span>
       </div>
 
       <p class="value mono">
@@ -42,9 +43,9 @@
       <div class="label">
         <div class="metal">
           <span class="icon">Au</span>
-          <span>Gold</span>
+          <span>{{ t("metal.gold") }}</span>
         </div>
-        <span class="badge">KRW per gram</span>
+        <span class="badge">{{ t("page.prices.krw_per_gram") }}</span>
       </div>
 
       <p class="value mono">
@@ -55,13 +56,14 @@
 
       <div class="meta">
         <span><span class="icon">₩</span> USD→KRW: <strong class="mono">{{ usdkrw }}</strong></span>
-        <span><span class="icon">⏱</span> Updated: <strong class="mono">{{ updated }}</strong></span>
+        <span><span class="icon">⏱</span> {{ t("common.updated") }}: <strong class="mono">{{ updated }}</strong>
+        </span>
       </div>
     </div>
   </div>
 
   <div class="footer">
-    <div>Auto-refresh: 15 minutes</div>
+    <div>{{ t("page.prices.auto_refresh") }}</div>
     <div>API: <a href="/api/prices" target="_blank">/api/prices</a></div>
   </div>
 </div>

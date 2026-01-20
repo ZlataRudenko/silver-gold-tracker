@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 from fastapi import Response
+from fastapi.responses import RedirectResponse
 import os
 import threading
 
@@ -16,9 +17,16 @@ import threading
 
 COOKIE_USER = "anon_user_id"
 
-MARGIN = 0.25          # 25% profit margin
+# ---- i18n (language) ----
+COOKIE_LANG = "lang"
+SUPPORTED_LANGS = ("en", "ko")
+DEFAULT_LANG = "en"
+
+
 CACHE_TTL = 15 * 60    # 15 minutes
 OZ_TO_GRAM = 31.1035
+DON_TO_GRAM = 3.75
+
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -40,8 +48,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 cache = {
     "updated": 0.0,
-    "silver": None,   # KRW per gram (with margin)
-    "gold": None,     # KRW per gram (with margin)
+    "silver": None,   # KRW per gram (reference)
+    "gold": None,     # KRW per gram (reference)
     "usdkrw": None
 }
 
@@ -88,9 +96,9 @@ def refresh_data():
         silver_krw_per_gram = (silver_usd_per_oz * usdkrw) / OZ_TO_GRAM
         gold_krw_per_gram = (gold_usd_per_oz * usdkrw) / OZ_TO_GRAM
 
-        # Apply margin (final selling price)
-        cache["silver"] = silver_krw_per_gram * (1 + MARGIN)
-        cache["gold"] = gold_krw_per_gram * (1 + MARGIN)
+        
+        cache["silver"] = silver_krw_per_gram 
+        cache["gold"] = gold_krw_per_gram 
         cache["usdkrw"] = usdkrw
         cache["updated"] = time.time()
 
@@ -121,12 +129,16 @@ def format_updated(ts: float) -> str:
 
 
 def compute_estimate(metal: str, unit: str, amount: float, data: dict):
-    """Returns: grams, price_per_gram, estimate_total
-    price_per_gram is KRW/g and already includes margin (from cache)
+    """
+    Returns: grams, price_per_gram, estimate_total
+
+    price_per_gram is KRW per gram based on live reference prices (no margin).
+    estimate_total is calculated using reference price only.
     """
     if metal not in ("silver", "gold"):
         metal = "silver"
-    if unit not in ("g", "kg", "oz"):
+
+    if unit not in ("g", "kg", "oz", "don"):
         unit = "g"
 
     if amount is None or amount <= 0:
@@ -135,17 +147,22 @@ def compute_estimate(metal: str, unit: str, amount: float, data: dict):
     if data["silver"] is None or data["gold"] is None or data["usdkrw"] is None:
         raise ValueError("Prices are unavailable right now. Please try again.")
 
+    # Reference price per gram (no margin)
     price_per_gram = data["silver"] if metal == "silver" else data["gold"]
 
     if unit == "kg":
         grams = amount * 1000.0
     elif unit == "oz":
         grams = amount * OZ_TO_GRAM
+    elif unit == "don":
+        grams = amount * DON_TO_GRAM
     else:
         grams = amount
 
     estimate_total = round(price_per_gram * grams, 2)
+
     return grams, price_per_gram, estimate_total
+
 
 def ensure_storage():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -168,6 +185,249 @@ def get_or_set_user_id(request: Request, response: Response) -> str:
         max_age=60 * 60 * 24 * 365,
     )
     return uid
+
+def detect_lang(request: Request) -> str:
+    """
+    Priority:
+    1) ?lang=en|ko
+    2) cookie "lang"
+    3) Accept-Language header (rough)
+    4) DEFAULT_LANG
+    """
+    # 1) query
+    q = (request.query_params.get("lang") or "").strip().lower()
+    if q in SUPPORTED_LANGS:
+        return q
+
+    # 2) cookie
+    c = (request.cookies.get(COOKIE_LANG) or "").strip().lower()
+    if c in SUPPORTED_LANGS:
+        return c
+
+    # 3) Accept-Language (very simple)
+    al = (request.headers.get("accept-language") or "").lower()
+    if al.startswith("ko") or "ko-" in al:
+        return "ko"
+
+    return DEFAULT_LANG
+
+I18N = {
+    "en": {
+        # navigation
+        "nav.prices": "Prices",
+        "nav.calculator": "Calculator",
+        "nav.quote": "Quick Quote",
+        "nav.marketplace": "Marketplace",
+        "nav.inbox": "Inbox",
+        "nav.request": "Leave a request",
+        "lang.en": "EN",
+        "lang.ko": "KO",
+        "side.buy": "BUY",
+        "side.sell": "SELL",
+
+
+        # common
+        "common.live": "Live",
+        "common.live_prices": "Live prices",
+        "common.live_estimate": "Live estimate",
+        "common.in_development": "In development",
+        "common.open": "Open",
+        "common.posted": "Posted",
+        "common.purity": "Purity",
+        "common.alias": "Alias",
+        "common.location": "Location",
+        "common.updated": "Updated",
+        "common.timestamp": "Timestamp",
+        "common.used_price": "Used price",
+        "common.estimated_total": "Estimated total",
+        "common.reference_estimated_total": "Reference estimated total",
+
+        # metals / units
+        "metal.label": "Metal",
+        "metal.silver": "Silver",
+        "metal.gold": "Gold",
+        "unit.label": "Unit",
+        "unit.g": "grams",
+        "unit.kg": "kilograms",
+        "unit.oz": "ounces",
+        "unit.don": "don (3.75 g)",
+        "page.request.section_title_sell": "SALE DETAILS",
+        "page.request.section_title_buy": "BUY DETAILS",
+
+        "product.bar": "Bar",
+        "product.coin": "Coin",
+        "product.jewelry": "Jewelry",
+        "product.other": "Other",
+
+
+        # actions / buttons
+        "btn.post_request": "Post request",
+        "btn.generate": "Generate",
+        "btn.copy": "Copy",
+        "btn.preview_estimate": "Preview estimate",
+        "btn.confirm_send": "Confirm & Send",
+        "btn.confirm_publish": "Confirm & Publish",
+        "btn.send": "Send",
+        "page.request.buy_tab": "Buy",
+        "page.request.sell_tab": "Sell",
+
+        # forms
+        "form.name": "Name",
+        "form.contact": "Contact (Email / Phone / Telegram)",
+        "form.product_type": "Product type",
+        "form.purity_hint": "Purity (e.g. 999, 925, 750, unknown)",
+        "form.amount": "Amount",
+        "form.location_hint": "Location (city / country)",
+        "form.message_optional": "Message (optional)",
+        "form.type_message": "Type your message...",
+
+        # pages
+        "page.marketplace.subtitle": "Anonymous buy/sell requests. No contacts are shown publicly.",
+        "page.marketplace.empty": "No active requests yet.",
+        "page.request.details_buy": "Request details",
+        "page.request.details_sell": "Sale details",
+        "page.request.store_price_ts": "We store price + timestamp",
+        "page.prices.title": "Silver & Gold Prices",
+        "page.prices.subtitle": "Prices shown are final selling prices",
+        "page.prices.krw_per_gram": "KRW per gram",
+        "page.prices.auto_refresh": "Auto-refresh: 15 minutes",
+        "page.marketplace.subtitle": "Anonymous buy/sell requests. No contacts are shown publicly.",
+        "page.marketplace.empty": "No active requests yet.",
+        "page.prices.title": "Silver & Gold Prices",
+        "page.prices.subtitle": "Prices shown are final selling prices",
+        "page.prices.krw_per_gram": "KRW per gram",
+        "page.prices.auto_refresh": "Auto-refresh: 15 minutes",
+        "page.request.buy_title": "Buy Request",
+        "page.request.sell_title": "Sell Request",
+        "page.request.footer_store_estimate": "We store estimate details to handle callbacks and confirmations.",
+        "page.request.footer_autoprices": "Auto-prices via",
+        "page.request.verify_note": "Please verify the estimate before sending. Prices may change with market updates.",
+        "page.request.subtitle": "Send details and get an estimated reference total based on current prices.",
+        "page.listing.title": "Listing",
+        "page.listing.subtitle": "Details of the request.",
+        "page.listing.message_label": "Message:",
+        "btn.back": "Back",
+        "btn.contact": "Contact",
+
+
+    },
+
+    "ko": {
+        # navigation
+        "nav.prices": "시세",
+        "nav.calculator": "계산기",
+        "nav.quote": "빠른 견적",
+        "nav.marketplace": "거래 게시판",
+        "nav.inbox": "메시지",
+        "nav.request": "요청 등록",
+        "lang.en": "EN",
+        "lang.ko": "KO",
+        "side.buy": "매수",
+        "side.sell": "매도",
+
+
+        # common
+        "common.live": "실시간",
+        "common.live_prices": "실시간 시세",
+        "common.live_estimate": "실시간 견적",
+        "common.in_development": "개발 중",
+        "common.open": "열기",
+        "common.posted": "등록됨",
+        "common.purity": "순도",
+        "common.alias": "별칭",
+        "common.location": "지역",
+        "common.updated": "업데이트",
+        "common.timestamp": "기록 시간",
+        "common.used_price": "적용 단가",
+        "common.estimated_total": "예상 합계",
+        "common.reference_estimated_total": "기준 예상 합계",
+
+        # metals / units
+        "metal.label": "금속",
+        "metal.silver": "은",
+        "metal.gold": "금",
+        "unit.label": "단위",
+        "unit.g": "그램",
+        "unit.kg": "킬로그램",
+        "unit.oz": "온스",
+        "unit.don": "돈",
+        "page.request.section_title_sell": "매도 정보",
+        "page.request.section_title_buy": "매수 정보",
+
+        "product.bar": "바",
+        "product.coin": "코인",
+        "product.jewelry": "주얼리",
+        "product.other": "기타",
+
+
+        # actions / buttons
+        "btn.post_request": "요청 등록",
+        "btn.generate": "생성",
+        "btn.copy": "복사",
+        "btn.preview_estimate": "견적 미리보기",
+        "btn.confirm_send": "확인 후 전송",
+        "btn.confirm_publish": "확인 후 등록",
+        "btn.send": "보내기",
+        "page.request.buy_tab": "매수",
+        "page.request.sell_tab": "매도",
+
+
+        # forms
+        "form.name": "이름",
+        "form.contact": "연락처 (이메일/전화/텔레그램)",
+        "form.product_type": "제품 유형",
+        "form.purity_hint": "순도 (예: 999, 925, 750, 미상)",
+        "form.amount": "수량",
+        "form.location_hint": "지역 (도시/국가)",
+        "form.message_optional": "메시지 (선택)",
+        "form.type_message": "메시지를 입력하세요...",
+
+        # pages
+        "page.marketplace.subtitle": "익명 매수/매도 요청입니다. 연락처는 공개되지 않습니다.",
+        "page.marketplace.empty": "등록된 요청이 아직 없습니다.",
+        "page.prices.title": "은 / 금 시세",
+        "page.prices.subtitle": "표시된 가격은 최종 판매 기준입니다",
+        "page.prices.krw_per_gram": "그램당 KRW",
+        "page.prices.auto_refresh": "자동 새로고침: 15분",
+        "page.marketplace.subtitle": "익명 매수/매도 요청입니다. 연락처는 공개되지 않습니다.",
+        "page.marketplace.empty": "등록된 요청이 아직 없습니다.",
+        "page.prices.title": "은/금 시세",
+        "page.prices.subtitle": "표시된 가격은 최종 판매 기준입니다",
+        "page.prices.krw_per_gram": "그램당 KRW",
+        "page.prices.auto_refresh": "자동 새로고침: 15분",
+        "page.request.buy_title": "매수 요청",
+        "page.request.details_buy": "요청 정보",
+        "page.request.details_sell": "매도 정보",
+        "page.request.store_price_ts": "단가 및 시간 저장",
+        "page.request.sell_title": "매도 요청",
+        "page.request.footer_store_estimate": "콜백/확인을 위해 견적 정보를 저장합니다.",
+        "page.request.footer_autoprices": "자동 시세:",
+        "page.request.verify_note": "전송 전 견적을 확인하세요. 시세 업데이트로 가격이 변동될 수 있습니다.",
+        "page.request.subtitle": "정보를 입력하면 현재 시세 기준 예상 합계를 계산해드립니다.",
+        "page.listing.title": "요청 상세",
+        "page.listing.subtitle": "요청 내용을 확인하세요.",
+        "page.listing.message_label": "메시지:",
+        "btn.back": "뒤로",
+        "btn.contact": "연락하기",
+
+    },
+}
+
+def t(lang: str, key: str) -> str:
+    # fallback: ko -> en -> key
+    return I18N.get(lang, I18N["en"]).get(key, I18N["en"].get(key, key))
+
+def inject_i18n(ctx: dict, request: Request):
+    lang = detect_lang(request)
+    ctx["lang"] = lang
+    ctx["t"] = lambda key: t(lang, key)
+    return lang
+
+def render_tmpl(request: Request, template_name: str, ctx: dict):
+    """TemplateResponse with injected i18n (lang + t())."""
+    inject_i18n(ctx, request)
+    return templates.TemplateResponse(template_name, ctx)
+
 
 def read_jsonl(path: Path):
     if not path.exists():
@@ -333,13 +593,16 @@ def send_message(
     text: str = Form(...),
 ):
     thread = find_thread(thread_id)
-    # migration-on-read: если старый thread без participants — восстановим
+
+    owner = None
+    buyer = None
     if thread and "participants" not in thread:
-        owner = thread.get("listing_owner_uid")
-        buyer = thread.get("buyer_uid")
-    if owner and buyer:
-        thread["participants"] = [buyer, owner]
-    
+       owner = thread.get("listing_owner_uid")
+       buyer = thread.get("buyer_uid")
+       if owner and buyer:
+           thread["participants"] = [buyer, owner]
+
+
     if not thread:
         return HTMLResponse("Thread not found", status_code=404)
 
@@ -362,7 +625,6 @@ def send_message(
         headers={"Location": f"/thread/{thread_id}"},
     )
 
-
 def render_inquiry(
     request: Request,
     *,
@@ -383,36 +645,34 @@ def render_inquiry(
     success: bool = False,
     error=None,
 ):
-    
-    return templates.TemplateResponse(
-        "inquiry.html",
-        {
-            "request": request,
-            "title": "Inquiry",
-            "active_page": "inquiry",
-            "page_title": "Inquiry",
+    ctx = {
+        "request": request,
+        "title": "Inquiry",
+        "active_page": "inquiry",
+        "page_title": "Inquiry",
 
-            "metal": metal,
-            "unit": unit,
-            "amount": amount,
+        "metal": metal,
+        "unit": unit,
+        "amount": amount,
 
-            "product_type": product_type,
-            "purity": purity,
-            "name": name,
-            "contact": contact,
-            "location": location,
-            "message": message,
+        "product_type": product_type,
+        "purity": purity,
+        "name": name,
+        "contact": contact,
+        "location": location,
+        "message": message,
 
-            "estimate": estimate,
-            "price_per_gram": price_per_gram,
-            "usdkrw": usdkrw,
-            "used_at": used_at,
-            "inquiry_id": inquiry_id,
+        "estimate": estimate,
+        "price_per_gram": price_per_gram,
+        "usdkrw": usdkrw,
+        "used_at": used_at,
+        "inquiry_id": inquiry_id,
 
-            "success": success,
-            "error": error,
-        },
-    )
+        "success": success,
+        "error": error,
+    }
+    return render_tmpl(request, "inquiry.html", ctx)
+
 
 def render_sell(
     request: Request,
@@ -434,41 +694,98 @@ def render_sell(
     success: bool = False,
     error=None,
 ):
-    return templates.TemplateResponse(
-        "sell.html",
-        {
-            "request": request,
-            "title": "Sell Request",
-            "active_page": "sell",
-            "page_title": "Sell Request",
+    ctx = {
+        "request": request,
+        "title": "Sell Request",
+        "active_page": "sell",
+        "page_title": "Sell Request",
 
-            "metal": metal,
-            "unit": unit,
-            "amount": amount,
+        "metal": metal,
+        "unit": unit,
+        "amount": amount,
 
-            "product_type": product_type,
-            "purity": purity,
-            "name": name,
-            "contact": contact,
-            "location": location,
-            "message": message,
+        "product_type": product_type,
+        "purity": purity,
+        "name": name,
+        "contact": contact,
+        "location": location,
+        "message": message,
 
-            "estimate": estimate,
-            "price_per_gram": price_per_gram,
-            "usdkrw": usdkrw,
-            "used_at": used_at,
-            "inquiry_id": inquiry_id,
+        "estimate": estimate,
+        "price_per_gram": price_per_gram,
+        "usdkrw": usdkrw,
+        "used_at": used_at,
+        "inquiry_id": inquiry_id,
 
-            "success": success,
-            "error": error,
-        },
-    )
+        "success": success,
+        "error": error,
+    }
+    return render_tmpl(request, "sell.html", ctx)
+    
+def render_request(
+    request: Request,
+    *,
+    side: str = "sell",
+    metal: str = "silver",
+    unit: str = "g",
+    amount=None,
+    product_type: str = "bar",
+    purity: str = "",
+    name: str = "",
+    contact: str = "",
+    location: str = "",
+    message: str = "",
+    estimate=None,
+    price_per_gram=None,
+    usdkrw=None,
+    used_at=None,
+    request_id=None,
+    lang: str = "en",
+    success: bool = False,
+    error=None,
+):
+    # нормализуем side
+    side = (side or "sell").strip().lower()
+    if side not in ("buy", "sell"):
+        side = "sell"
+
+    ctx = {
+        "request": request,
+
+        "title": "Request",
+        "active_page": "request",
+        "page_title": "Leave a request",
+
+        "side": side,
+
+        "metal": metal,
+        "unit": unit,
+        "amount": amount,
+
+        "product_type": product_type,
+        "purity": purity,
+        "name": name,
+        "contact": contact,
+        "location": location,
+        "message": message,
+
+        "estimate": estimate,
+        "price_per_gram": price_per_gram,
+        "usdkrw": usdkrw,
+        "used_at": used_at,
+        "request_id": request_id,
+
+        "success": success,
+        "error": error,
+    }
+
+    return render_tmpl(request, "request.html", ctx)
+
 
 @app.on_event("startup")
 def on_startup():
     ensure_storage()
     refresh_data_async()
-
 
 # ===== WEB PAGES =====
 
@@ -482,20 +799,15 @@ def thread_page(request: Request, thread_id: str):
     messages = read_messages(thread_id)
     listing = find_listing(thread["listing_id"])
 
-    page = templates.TemplateResponse(
-        "thread.html",
-        {
-            "request": request,
-            "thread": thread,
-            "listing": listing,
-            "messages": messages,
-        },
-    )
+    ctx = {
+        "request": request,
+        "thread": thread,
+        "listing": listing,
+        "messages": messages,
+    }
+    page = render_tmpl(request, "thread.html", ctx)
 
-    # ✅ гарантируем uid и cookie на page
     user_uid = get_or_set_user_id(request, page)
-
-    # ✅ проверка доступа
     if user_uid not in thread.get("participants", []):
         return HTMLResponse("Access denied", status_code=403)
 
@@ -507,45 +819,42 @@ def marketplace(request: Request):
     listings = load_listings()
     listings = sorted(listings, key=lambda x: x.get("created_at", ""), reverse=True)
 
-    return templates.TemplateResponse(
-        "marketplace.html",
-        {
-            "request": request,
-            "title": "Marketplace",
-            "page_title": "Marketplace",
-            "active_page": "marketplace",
-            "listings": listings,
-        },
-    )
+    ctx = {
+        "request": request,
+        "title": "Marketplace",
+        "page_title": "Marketplace",
+        "active_page": "marketplace",
+        "listings": listings,
+    }
+    return render_tmpl(request, "marketplace.html", ctx)
 
 @app.get("/listing/{listing_id}", response_class=HTMLResponse)
 def listing_page(request: Request, listing_id: str):
     listing = find_listing(listing_id)
-    if not listing:
-        return templates.TemplateResponse(
-            "listing.html",
-            {
-                "request": request,
-                "title": "Listing",
-                "page_title": "Listing",
-                "active_page": "marketplace",
-                "listing": None,
-                "error": "Listing not found.",
-            },
-            status_code=404,
-        )
 
-    return templates.TemplateResponse(
-        "listing.html",
-        {
+    if not listing:
+        ctx = {
             "request": request,
             "title": "Listing",
-            "page_title": "Listing details",
+            "page_title": "Listing",
             "active_page": "marketplace",
-            "listing": listing,
-            "error": None,
-        },
-    )
+            "listing": None,
+            "error": "Listing not found.",
+        }
+        page = render_tmpl(request, "listing.html", ctx)
+        page.status_code = 404
+        return page
+
+    ctx = {
+        "request": request,
+        "title": "Listing",
+        "page_title": "Listing details",
+        "active_page": "marketplace",
+        "listing": listing,
+        "error": None,
+    }
+    return render_tmpl(request, "listing.html", ctx)
+
 
 # @app.post("/contact", response_class=HTMLResponse)
 def contact_owner(
@@ -557,32 +866,30 @@ def contact_owner(
 
     listing = find_listing(listing_id)
     if not listing:
-        return templates.TemplateResponse(
-            "listing.html",
-            {
-                "request": request,
-                "title": "Listing",
-                "page_title": "Listing details",
-                "active_page": "marketplace",
-                "listing": None,
-                "error": "Listing not found.",
-            },
-            status_code=404,
-        )
+        ctx = {
+            "request": request,
+            "title": "Listing",
+            "page_title": "Listing details",
+            "active_page": "marketplace",
+            "listing": None,
+            "error": "Listing not found.",
+        }
+        page = render_tmpl(request, "listing.html", ctx)
+        page.status_code = 404
+        return page
 
     # нельзя “контактировать саму себя”
     if listing.get("owner_uid") == uid:
-        return templates.TemplateResponse(
-            "listing.html",
-            {
-                "request": request,
-                "title": "Listing",
-                "page_title": "Listing details",
-                "active_page": "marketplace",
-                "listing": listing,
-                "error": "You are the owner of this listing.",
-            },
-        )
+        ctx = {
+            "request": request,
+            "title": "Listing",
+            "page_title": "Listing details",
+            "active_page": "marketplace",
+            "listing": listing,
+            "error": "You can’t contact your own listing.",
+        }
+        return render_tmpl(request, "listing.html", ctx)
+
 
     existing = find_existing_thread(listing_id, uid)
     if existing:
@@ -592,13 +899,15 @@ def contact_owner(
         thread_id = thread["thread_id"]
 
     # сразу отправляем в чат
-    return templates.TemplateResponse(
-        "redirect.html",
-        {
-            "request": request,
-            "to": f"/thread/{thread_id}",
-        },
-    )
+    ctx = {
+        "request": request,
+        "title": "Redirect",
+        "page_title": "Redirecting…",
+        "active_page": "marketplace",
+        "to": f"/thread/{thread_id}",
+    }
+    return render_tmpl(request, "redirect.html", ctx)
+
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
@@ -608,42 +917,37 @@ def home(request: Request):
     if data["silver"] is None or data["gold"] is None or data["usdkrw"] is None:
         error = "Price feed is temporarily unavailable. Please try again."
 
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "title": "Prices",
-            "page_title": "Silver & Gold Prices",
-            "active_page": "prices",
-
-            "silver": round(data["silver"], 2) if data["silver"] is not None else None,
-            "gold": round(data["gold"], 2) if data["gold"] is not None else None,
-            "usdkrw": round(data["usdkrw"], 2) if data["usdkrw"] is not None else None,
-            "margin": int(MARGIN * 100),
-            "updated": format_updated(data["updated"]),
-            "error": error,
-        },
-    )
+    ctx = {
+        "request": request,
+        "title": "Prices",
+        "page_title": "Silver & Gold Prices",
+        "active_page": "prices",
+        "silver": round(data["silver"], 2) if data["silver"] is not None else None,
+        "gold": round(data["gold"], 2) if data["gold"] is not None else None,
+        "usdkrw": round(data["usdkrw"], 2) if data["usdkrw"] is not None else None,
+        "updated": format_updated(data["updated"]),
+        "error": error,
+    }
+    return render_tmpl(request, "index.html", ctx)
 
 
 @app.get("/calculator", response_class=HTMLResponse)
 def calculator(request: Request):
-    return templates.TemplateResponse(
-        "calculator.html",
-        {
-            "request": request,
-            "title": "Calculator",
-            "page_title": "Precious Metals Calculator",
-            "active_page": "calculator",
-
-            "metal": "silver",
-            "unit": "g",
-            "amount": None,
-            "result": None,
-            "price_per_gram": None,
-            "error": None,
-        },
-    )
+    ctx = {
+        "request": request,
+        "title": "Calculator",
+        "page_title": "Precious Metals Calculator",
+        "active_page": "calculator",
+        "metal": "silver",
+        "unit": "g",
+        "amount": None,
+        "margin_percent": 0,
+        "result_ref": None,
+        "result": None,
+        "price_per_gram": None,
+        "error": None,
+    }
+    return render_tmpl(request, "calculator.html", ctx)
 
 
 @app.post("/calculator", response_class=HTMLResponse)
@@ -652,6 +956,7 @@ def calculator_result(
     metal: str = Form("silver"),
     unit: str = Form("g"),
     amount: float = Form(...),
+    margin_percent: float = Form(0),
 ):
     data = get_data()
 
@@ -663,55 +968,323 @@ def calculator_result(
         "metal": metal,
         "unit": unit,
         "amount": amount,
+        "margin_percent": margin_percent,
+        "result_ref": None,
         "result": None,
         "price_per_gram": None,
         "error": None,
     }
 
     try:
-        grams, price_per_gram, total = compute_estimate(metal, unit, amount, data)
-        base_ctx["result"] = total
+        grams, price_per_gram, total_ref = compute_estimate(metal, unit, amount, data)
+
+        # validate margin
+        if margin_percent is None:
+           margin_percent = 0
+        if margin_percent < 0 or margin_percent > 100:
+           raise ValueError("Margin must be between 0 and 100.")
+
+        total_final = round(total_ref * (1 + (margin_percent / 100.0)), 2)
+
+        base_ctx["result_ref"] = total_ref
+        base_ctx["result"] = total_final
         base_ctx["price_per_gram"] = round(price_per_gram, 2)
-        return templates.TemplateResponse("calculator.html", base_ctx)
+        base_ctx["margin_percent"] = margin_percent
+
     except Exception as e:
         base_ctx["error"] = str(e)
         # normalize inputs if user sent junk
         if metal not in ("silver", "gold"):
             base_ctx["metal"] = "silver"
-        if unit not in ("g", "kg", "oz"):
+        if unit not in ("g", "kg", "oz", "don"):
             base_ctx["unit"] = "g"
-        return templates.TemplateResponse("calculator.html", base_ctx)
+    return render_tmpl(request, "calculator.html", base_ctx)
 
 @app.get("/inbox", response_class=HTMLResponse)
 def inbox(request: Request):
-    return templates.TemplateResponse(
-        "inbox.html",
-        {
-            "request": request,
-            "title": "Inbox",
-            "page_title": "Inbox",
-            "active_page": "inbox",
-        },
-    )
-
+    ctx = {
+        "request": request,
+        "title": "Inbox",
+        "page_title": "Inbox",
+        "active_page": "inbox",
+    }
+    return render_tmpl(request, "inbox.html", ctx)
 
 @app.get("/quote", response_class=HTMLResponse)
 def quote(request: Request):
-    return templates.TemplateResponse(
-        "quote.html",
-        {
-            "request": request,
-            "title": "Quick Quote",
-            "page_title": "Quick Quote",
-            "active_page": "quote",
-        },
+    ctx = {
+        "request": request,
+        "title": "Quick Quote",
+        "page_title": "Quick Quote",
+        "active_page": "quote",
+    }
+    return render_tmpl(request, "quote.html", ctx)
+
+@app.get("/request", response_class=HTMLResponse)
+def request_page(request: Request, side: str = "sell"):
+    # Язык НЕ трогаем здесь вообще.
+    # Он берётся из cookie (которую ставит /set-lang/...)
+    return render_request(request, side=side)
+
+@app.get("/set-lang/{lang}", name="set_lang")
+def set_lang(lang: str, request: Request):
+    lang = (lang or "").strip().lower()
+    if lang not in SUPPORTED_LANGS:
+        lang = "en"
+
+    # куда вернуться
+    back = request.query_params.get("next") or "/"
+    resp = RedirectResponse(url=back, status_code=302)
+
+    resp.set_cookie(
+        key=COOKIE_LANG,
+        value=lang,
+        httponly=False,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 365,
+    )
+    return resp
+
+
+@app.post("/request/preview", response_class=HTMLResponse)
+def request_preview(
+    request: Request,
+    side: str = Form("sell"),
+    name: str = Form(""),
+    contact: str = Form(""),
+    metal: str = Form("silver"),
+    product_type: str = Form("bar"),
+    purity: str = Form(""),
+    amount: float = Form(...),
+    unit: str = Form("g"),
+    location: str = Form(""),
+    message: str = Form(""),
+):
+    side = (side or "sell").strip().lower()
+    if side not in ("buy", "sell"):
+        side = "sell"
+
+    # clean
+    name = (name or "").strip()
+    contact = (contact or "").strip()
+    purity = (purity or "").strip()
+    location = (location or "").strip()
+    message = (message or "").strip()
+    product_type = (product_type or "bar").strip()
+
+    data = get_data()
+
+    try:
+        grams, price_per_gram, estimate_total = compute_estimate(metal, unit, amount, data)
+        used_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        return render_request(
+            request,
+            side=side,
+            metal=metal,
+            unit=unit,
+            amount=amount,
+            product_type=product_type,
+            purity=purity,
+            name=name,
+            contact=contact,
+            location=location,
+            message=message,
+            estimate=estimate_total,
+            price_per_gram=round(price_per_gram, 2),
+            usdkrw=round(float(data["usdkrw"]), 2),
+            used_at=used_at,
+            inquiry_id=None,
+            success=False,
+            error=None,
+        )
+    except Exception as e:
+        return render_request(
+            request,
+            side=side,
+            metal=metal,
+            unit=unit,
+            amount=amount,
+            product_type=product_type,
+            purity=purity,
+            name=name,
+            contact=contact,
+            location=location,
+            message=message,
+            estimate=None,
+            price_per_gram=None,
+            usdkrw=None,
+            used_at=None,
+            inquiry_id=None,
+            success=False,
+            error=str(e),
+        )
+
+@app.post("/request/confirm", response_class=HTMLResponse)
+def request_confirm(
+    request: Request,
+    response: Response,
+    side: str = Form("sell"),
+    name: str = Form(...),
+    contact: str = Form(...),
+    metal: str = Form("silver"),
+    product_type: str = Form("bar"),
+    purity: str = Form(""),
+    amount: float = Form(...),
+    unit: str = Form("g"),
+    location: str = Form(""),
+    message: str = Form(""),
+    confirm: str | None = Form(None),
+):
+    side = (side or "sell").strip().lower()
+    if side not in ("buy", "sell"):
+        side = "sell"
+
+    # clean
+    name = (name or "").strip()
+    contact = (contact or "").strip()
+    purity = (purity or "").strip()
+    location = (location or "").strip()
+    message = (message or "").strip()
+    product_type = (product_type or "bar").strip()
+
+    confirm_val = (confirm or "").strip().lower()
+    if confirm_val not in ("1", "yes", "true", "ok"):
+        return render_request(
+            request,
+            side=side,
+            metal=metal,
+            unit=unit,
+            amount=amount,
+            product_type=product_type,
+            purity=purity,
+            name=name,
+            contact=contact,
+            location=location,
+            message=message,
+            success=False,
+            error="Please click Preview first, then Confirm.",
+        )
+
+    if not name or not contact:
+        return render_request(
+            request,
+            side=side,
+            metal=metal,
+            unit=unit,
+            amount=amount,
+            product_type=product_type,
+            purity=purity,
+            name=name,
+            contact=contact,
+            location=location,
+            message=message,
+            success=False,
+            error="Name and contact are required.",
+        )
+
+    data = get_data()
+
+    try:
+        grams, price_per_gram, estimate_total = compute_estimate(metal, unit, amount, data)
+    except Exception as e:
+        return render_request(
+            request,
+            side=side,
+            metal=metal,
+            unit=unit,
+            amount=amount,
+            product_type=product_type,
+            purity=purity,
+            name=name,
+            contact=contact,
+            location=location,
+            message=message,
+            success=False,
+            error=str(e),
+        )
+
+    uid = get_or_set_user_id(request, response)
+
+    # marketplace listing
+    listing = {
+        "id": str(uuid.uuid4()),
+        "type": side,  # buy/sell
+        "metal": metal,
+        "product_type": product_type,
+        "purity": purity,
+        "amount": grams,
+        "unit": "g",
+        "price_per_gram": float(price_per_gram),
+        "estimate_total": float(estimate_total),
+        "location": location,
+        "message": message,
+        "created_at": datetime.utcnow().isoformat(),
+        "owner_uid": uid,
+        "alias": gen_alias(side),
+        "contact_hidden": True,
+    }
+    save_listing(listing)
+
+    now = datetime.now()
+    used_at = now.strftime("%Y-%m-%d %H:%M:%S")
+    req_id = str(uuid.uuid4())[:8]
+
+    record = {
+        "id": req_id,
+        "created_at": now.isoformat(timespec="seconds"),
+        "side": side,
+
+        "metal": metal if metal in ("silver", "gold") else "silver",
+        "product_type": product_type,
+        "purity": purity,
+        "amount": amount,
+        "unit": unit if unit in ("g", "kg", "oz", "don") else "g",
+        "grams": grams,
+
+        "price_per_gram_used": round(float(price_per_gram), 6),
+        "usdkrw_used": round(float(data["usdkrw"]), 6),
+        "estimated_total_krw": estimate_total,
+
+        "name": name,
+        "contact": contact,
+        "location": location,
+        "message": message,
+    }
+
+    try:
+        if side == "buy":
+            append_jsonl(INQUIRIES_FILE, record)
+        else:
+            append_jsonl(SELL_REQUESTS_FILE, record)
+    except Exception as e:
+        print("ERROR saving request:", repr(e))
+
+    return render_request(
+        request,
+        side=side,
+        metal=metal,
+        unit=unit,
+        amount=amount,
+        product_type=product_type,
+        purity=purity,
+        name=name,
+        contact=contact,
+        location=location,
+        message=message,
+        estimate=estimate_total,
+        price_per_gram=round(price_per_gram, 2),
+        usdkrw=round(float(data["usdkrw"]), 2),
+        used_at=used_at,
+        inquiry_id=req_id,  # чтобы шаблон мог показать ID
+        success=True,
+        error=None,
     )
 
 
 @app.get("/inquiry", response_class=HTMLResponse)
 def inquiry(request: Request):
-    # empty form
-    return render_inquiry(request)
+    return RedirectResponse(url="/request?side=buy", status_code=302)
 
 
 @app.post("/inquiry/preview", response_class=HTMLResponse)
@@ -899,7 +1472,7 @@ def inquiry_submit(
         "product_type": product_type,
         "purity": purity,
         "amount": amount,
-        "unit": unit if unit in ("g", "kg", "oz") else "g",
+        "unit": unit if unit in ("g", "kg", "oz", "don") else "g",
         "grams": grams,
 
         "price_per_gram_used": round(float(price_per_gram), 6),
@@ -942,7 +1515,7 @@ def inquiry_submit(
 
 @app.get("/sell", response_class=HTMLResponse)
 def sell(request: Request):
-    return render_sell(request)
+    return RedirectResponse(url="/request?side=sell", status_code=302)
 
 
 @app.post("/sell/preview", response_class=HTMLResponse)
@@ -1124,7 +1697,7 @@ def sell_submit(
         "product_type": product_type,
         "purity": purity,
         "amount": amount,
-        "unit": unit if unit in ("g", "kg", "oz") else "g",
+        "unit": unit if unit in ("g", "kg", "oz", "don") else "g",
         "grams": grams,
 
         "price_per_gram_used": round(float(price_per_gram), 6),
@@ -1174,7 +1747,7 @@ def api_prices():
             "silver_krw_per_gram": round(data["silver"], 2) if data["silver"] is not None else None,
             "gold_krw_per_gram": round(data["gold"], 2) if data["gold"] is not None else None,
             "usdkrw": round(data["usdkrw"], 2) if data["usdkrw"] is not None else None,
-            "margin_percent": int(MARGIN * 100),
+            "margin_percent": 0,
             "updated": data["updated"],
         }
     )

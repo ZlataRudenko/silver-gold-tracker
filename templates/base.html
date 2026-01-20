@@ -10,15 +10,49 @@
 
 <body>
   <!-- TOP NAV (same style as index) -->
+  <!-- TOP NAV -->
+  <!-- TOP NAV -->
   <div class="topnav">
-    <div class="nav-inner">
-      <a href="/" class="{{ 'active' if active_page=='prices' else '' }}">Prices</a>
-      <a href="/calculator" class="{{ 'active' if active_page=='calculator' else '' }}">Calculator</a>
-      <a href="/quote" class="{{ 'active' if active_page=='quote' else '' }}">Quick Quote</a>
-      <a href="/marketplace">Marketplace</a>
-      <a href="/inbox">Inbox</a>
-      <a href="/inquiry" class="{{ 'active' if active_page=='inquiry' else '' }}">Inquiry</a>
-      <a href="/sell" class="{% if active_page=='sell' %}active{% endif %}">Sell</a>
+    <div class="nav-inner nav-inner--with-lang">
+
+      <!-- left: main nav -->
+      <div class="nav-left">
+        <a href="/" class="{{ 'active' if active_page=='prices' else '' }}">
+          {{ t("nav.prices") if t is defined else "Prices" }}
+        </a>
+
+        <a href="/calculator" class="{{ 'active' if active_page=='calculator' else '' }}">
+          {{ t("nav.calculator") if t is defined else "Calculator" }}
+        </a>
+
+        <a href="/quote" class="{{ 'active' if active_page=='quote' else '' }}">
+          {{ t("nav.quote") if t is defined else "Quick Quote" }}
+        </a>
+
+        <a href="/marketplace" class="{{ 'active' if active_page=='marketplace' else '' }}">
+          {{ t("nav.marketplace") if t is defined else "Marketplace" }}
+        </a>
+
+        <a href="/inbox" class="{{ 'active' if active_page=='inbox' else '' }}">
+          {{ t("nav.inbox") if t is defined else "Inbox" }}
+        </a>
+
+        <a href="/request?side=sell" class="nav-link {% if active_page == 'request' %}active{% endif %}">
+          {{ t("nav.request") if t is defined else "Leave a request" }}
+        </a>
+      </div>
+
+      <!-- right: language switch (utility) -->
+      <div class="lang-switch" role="group" aria-label="Language">
+        {% set next_path = request.url.path %}
+
+        <a class="lang-btn {% if lang == 'en' %}active{% endif %}"
+          href="{{ request.url_for('set_lang', lang='en') }}?next={{ next_path }}">EN</a>
+
+        <a class="lang-btn {% if lang == 'ko' %}active{% endif %}"
+          href="{{ request.url_for('set_lang', lang='ko') }}?next={{ next_path }}">KR</a>
+      </div>
+
     </div>
   </div>
 

@@ -22,9 +22,12 @@
 
       <label class="subtitle" style="margin-top:12px;">Unit</label>
       <select name="unit">
-        <option value="g">grams</option>
-        <option value="kg">kilograms</option>
-        <option value="oz">ounces</option>
+        <select name="unit">
+          <option value="g">{{ t("unit.g") }}</option>
+          <option value="kg">{{ t("unit.kg") }}</option>
+          <option value="oz">{{ t("unit.oz") }}</option>
+          <option value="don">{{ t("unit.don") }}</option>
+        </select>
       </select>
 
       <label class="subtitle" style="margin-top:12px;">Amount</label>
@@ -42,7 +45,7 @@
       <button type="submit" style="margin-top:16px;">Publish</button>
 
       {% if error %}
-        <p style="color:#f87171; margin-top:12px;">{{ error }}</p>
+      <p style="color:#f87171; margin-top:12px;">{{ error }}</p>
       {% endif %}
     </form>
 

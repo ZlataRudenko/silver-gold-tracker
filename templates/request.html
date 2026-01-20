@@ -5,35 +5,48 @@
 
     <div class="header">
         <div>
-            <h1 class="title">Inquiry</h1>
-            <p class="subtitle">Send details and get an estimated total based on current prices.</p>
+            {% if side == "buy" %}
+            <h1 class="title">{{ t("page.request.buy_title") }}</h1>
+            <p class="subtitle">{{ t("page.request.subtitle") }}</p>
+            {% else %}
+            <h1 class="title">{{ t("page.request.sell_title") }}</h1>
+            <p class="subtitle">{{ t("page.request.subtitle") }}</p>
+            {% endif %}
         </div>
 
-        <div style="display:flex; gap:10px; align-items:center;">
-            <a href="/inquiry"
-                style="padding:8px 12px; border-radius:999px; border:1px solid var(--line); background:rgba(9, 101, 229, 0.626); color:var(--text); text-decoration:none; font-weight:800;">
-                Buy
-            </a>
-            <a href="/sell"
-                style="padding:8px 12px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text); text-decoration:none; font-weight:800;">
-                Sell
-            </a>
+        <div class="header">
+
+            <div class="header-right">
+                <div class="header-controls">
+                    <div class="side-toggle">
+                        <a class="side-btn {% if side=='buy' %}active{% endif %}" href="/request?side=buy">
+                            {{ t("page.request.buy_tab") }}
+                        </a>
+                        <a class="side-btn {% if side=='sell' %}active{% endif %}" href="/request?side=sell">
+                            {{ t("page.request.sell_tab") }}
+                        </a>
+                    </div>
+
+                    <div class="pill live-pill">
+                        <span class="dot"></span>
+                        <span>{{ t("common.live_estimate") }}</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-
-        <div class="pill">
-            <span class="dot"></span>
-            <span>Live estimate</span>
-        </div>
     </div>
 
     <div class="card">
         <div class="label">
             <div class="metal">
                 <span class="icon">✉</span>
-                <span>Request details</span>
+                <span>
+                    {% if side == "buy" %}{{ t("page.request.details_buy") }}{% else %}{{ t("page.request.details_sell")
+                    }}{% endif %}
+                </span>
             </div>
-            <span class="badge">We store price + timestamp</span>
+            <span class="badge">{{ t("page.request.store_price_ts") }}</span>
         </div>
 
         {% if error %}
@@ -43,30 +56,29 @@
         {% if success %}
         <div
             style="margin: 10px 0 14px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(34,197,94,.08);">
+            {% if side == "buy" %}
             <strong>✅ Inquiry sent.</strong>
-            {% if inquiry_id %} ID: <span class="mono">{{ inquiry_id }}</span>{% endif %}
+            {% else %}
+            <strong>✅ Sale request published.</strong>
+            {% endif %}
+            {% if request_id %} ID: <span class="mono">{{ request_id }}</span>{% endif %}
         </div>
         {% endif %}
 
-        {# =========================
-        FORM #1: PREVIEW (goes to /inquiry/preview)
-        We show this when:
-        - no estimate yet, OR
-        - estimate exists but user can still edit (we keep it available)
-        - BUT we don't show it after success
-        ========================= #}
+        {# FORM #1: PREVIEW #}
         {% if not success %}
-        <form method="post" action="/inquiry/preview" style="display:grid; gap:12px; max-width: 760px;">
+        <form method="post" action="/request/preview" style="display:grid; gap:12px; max-width: 760px;">
+            <input type="hidden" name="side" value="{{ side }}">
 
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                 <div>
-                    <label style="color:var(--muted); font-size:13px;">Name</label><br>
+                    <label style="color:var(--muted); font-size:13px;">{{ t("form.name") }}</label><br>
                     <input name="name" required value="{{ name or '' }}"
                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
                 </div>
 
                 <div>
-                    <label style="color:var(--muted); font-size:13px;">Contact (Email / Phone / Telegram)</label><br>
+                    <label style="color:var(--muted); font-size:13px;">{{ t("form.contact") }}</label><br>
                     <input name="contact" required value="{{ contact or '' }}"
                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
                 </div>
@@ -74,27 +86,32 @@
 
             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
                 <div>
-                    <label style="color:var(--muted); font-size:13px;">Metal</label><br>
+                    <label style="color:var(--muted); font-size:13px;">{{ t("metal.label") }}</label><br>
                     <select name="metal"
                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
-                        <option value="silver" {% if metal=='silver' %}selected{% endif %}>Silver</option>
-                        <option value="gold" {% if metal=='gold' %}selected{% endif %}>Gold</option>
+                        <option value="silver" {% if metal=='silver' %}selected{% endif %}>{{ t("metal.silver") }}
+                        </option>
+                        <option value="gold" {% if metal=='gold' %}selected{% endif %}>{{ t("metal.gold") }}</option>
                     </select>
                 </div>
 
                 <div>
-                    <label style="color:var(--muted); font-size:13px;">Product type</label><br>
+                    <label style="color:var(--muted); font-size:13px;">{{ t("form.product_type") }}</label><br>
                     <select name="product_type"
                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
-                        <option value="bar" {% if product_type=='bar' %}selected{% endif %}>Bar</option>
-                        <option value="coin" {% if product_type=='coin' %}selected{% endif %}>Coin</option>
-                        <option value="jewelry" {% if product_type=='jewelry' %}selected{% endif %}>Jewelry</option>
-                        <option value="other" {% if product_type=='other' %}selected{% endif %}>Other</option>
+                        <option value="bar" {% if product_type=='bar' %}selected{% endif %}>{{ t("product.bar") }}
+                        </option>
+                        <option value="coin" {% if product_type=='coin' %}selected{% endif %}>{{ t("product.coin") }}
+                        </option>
+                        <option value="jewelry" {% if product_type=='jewelry' %}selected{% endif %}>{{
+                            t("product.jewelry") }}</option>
+                        <option value="other" {% if product_type=='other' %}selected{% endif %}>{{ t("product.other") }}
+                        </option>
                     </select>
                 </div>
 
                 <div>
-                    <label style="color:var(--muted); font-size:13px;">Purity (e.g. 999, 925, 750, unknown)</label><br>
+                    <label style="color:var(--muted); font-size:13px;">{{ t("form.purity_hint") }}</label><br>
                     <input name="purity" value="{{ purity or '' }}"
                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
                 </div>
@@ -102,71 +119,70 @@
 
             <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px; align-items:end;">
                 <div>
-                    <label style="color:var(--muted); font-size:13px;">Amount</label><br>
+                    <label style="color:var(--muted); font-size:13px;">{{ t("form.amount") }}</label><br>
                     <input type="number" name="amount" step="0.01" required
                         value="{{ amount if amount is not none else '' }}"
                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
                 </div>
 
                 <div>
-                    <label style="color:var(--muted); font-size:13px;">Unit</label><br>
+                    <label style="color:var(--muted); font-size:13px;">{{ t("unit.label") }}</label><br>
                     <select name="unit"
                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
-                        <option value="g" {% if unit=='g' %}selected{% endif %}>grams</option>
-                        <option value="kg" {% if unit=='kg' %}selected{% endif %}>kilograms</option>
-                        <option value="oz" {% if unit=='oz' %}selected{% endif %}>ounces</option>
+                        <option value="g" {% if unit=='g' %}selected{% endif %}>{{ t("unit.g") }}</option>
+                        <option value="kg" {% if unit=='kg' %}selected{% endif %}>{{ t("unit.kg") }}</option>
+                        <option value="oz" {% if unit=='oz' %}selected{% endif %}>{{ t("unit.oz") }}</option>
                         <option value="don" {% if unit=='don' %}selected{% endif %}>{{ t("unit.don") }}</option>
                     </select>
                 </div>
 
                 <div>
                     <button type="submit"
-                        style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.08); color:var(--text); font-weight:800; cursor:pointer;">
-                        Preview estimate
-                    </button>
+                        style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.08); color:var(--text); font-weight:800; cursor:pointer;">{{
+                        t("btn.preview_estimate") }}</button>
                 </div>
             </div>
 
             <div>
-                <label style="color:var(--muted); font-size:13px;">Location (city / country)</label><br>
+                <label style="color:var(--muted); font-size:13px;">{{ t("form.location_hint") }}</label><br>
                 <input name="location" value="{{ location or '' }}"
                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text);">
             </div>
 
             <div>
-                <label style="color:var(--muted); font-size:13px;">Message</label><br>
-                <textarea name="message" rows="4"
+                <label style="color:var(--muted); font-size:13px;">{{ t("form.message_optional") }}</label><br>
+                <textarea name="message" rows="4" placeholder="{{ t('form.type_message') }}"
                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text); resize:vertical;">{{ message or '' }}</textarea>
             </div>
-
         </form>
         {% endif %}
 
-        {# =========================
-        PREVIEW BLOCK + CONFIRM FORM (Form #2)
-        Show only when estimate exists AND not success
-        ========================= #}
+        {# PREVIEW + CONFIRM #}
         {% if estimate is not none and not success %}
         <div class="meta" style="margin-top:16px;">
-            <span><span class="icon">₩</span> Used price: <strong class="mono">{{ price_per_gram }}</strong> KRW /
-                g</span>
+            <span><span class="icon">₩</span> {{ t("common.used_price") }}: <strong class="mono">{{ price_per_gram
+                    }}</strong> KRW / g</span>
             {% if usdkrw is not none %}
             <span><span class="icon">₩</span> USD→KRW: <strong class="mono">{{ usdkrw }}</strong></span>
             {% endif %}
             {% if used_at %}
-            <span><span class="icon">⏱</span> Timestamp: <strong class="mono">{{ used_at }}</strong></span>
+            <span><span class="icon">⏱</span> {{ t("common.timestamp") }}: <strong class="mono">{{ used_at
+                    }}</strong></span>
             {% endif %}
         </div>
 
         <p class="value mono" style="margin-top:16px;">
             {{ estimate }} <span style="font-size:16px; font-weight:700; color:rgba(255,255,255,.75);">KRW</span>
         </p>
-        <div class="unit">Estimated total</div>
+        <div class="unit">
+            {% if side == "buy" %}{{ t("common.estimated_total") }}{% else %}{{ t("common.reference_estimated_total")
+            }}{% endif %}
+        </div>
 
         <div style="margin-top:14px; display:flex; gap:12px; flex-wrap:wrap;">
-            {# FORM #2: Confirm & Send (goes to /inquiry) #}
-            <form method="post" action="/inquiry" style="margin:0;">
+            <form method="post" action="/request/confirm" style="margin:0;">
                 <input type="hidden" name="confirm" value="1">
+                <input type="hidden" name="side" value="{{ side }}">
 
                 <input type="hidden" name="name" value="{{ name }}">
                 <input type="hidden" name="contact" value="{{ contact }}">
@@ -180,12 +196,12 @@
 
                 <button type="submit"
                     style="padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:rgba(34,197,94,.18); color:var(--text); font-weight:900; cursor:pointer;">
-                    Confirm & Send
+                    {% if side == "buy" %}{{ t("btn.confirm_send") }}{% else %}{{ t("btn.confirm_publish") }}{% endif %}
                 </button>
             </form>
 
             <div style="color:var(--muted); font-size:12px; align-self:center;">
-                Please verify the estimate before sending. Prices may change with market updates.
+                {{ t("page.request.verify_note") }}
             </div>
         </div>
         {% endif %}
@@ -193,8 +209,8 @@
     </div>
 
     <div class="footer">
-        <div>We store estimate details to handle callbacks and confirmations.</div>
-        <div>Auto-prices via <a href="/api/prices" target="_blank">/api/prices</a></div>
+        <div>{{ t("page.request.footer_store_estimate") }}</div>
+        <div>{{ t("page.request.footer_autoprices") }} <a href="/api/prices" target="_blank">/api/prices</a></div>
     </div>
 
 </div>
