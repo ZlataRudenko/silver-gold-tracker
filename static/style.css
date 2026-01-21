@@ -29,17 +29,19 @@ body {
     radial-gradient(900px 500px at 20% 10%, rgba(120, 119, 198, .35), transparent 55%),
     radial-gradient(900px 500px at 80% 20%, rgba(34, 211, 238, .25), transparent 60%),
     linear-gradient(180deg, var(--bg1), var(--bg2));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 26px;
+
+  /* вот это и даёт “расстояние от краёв” */
+  padding: 4px;
+
+  /* ВАЖНО: убираем центрирование всего приложения */
+  display: block;
 }
 
 .wrap {
   width: 100%;
   max-width: 860px;
   margin: 0 auto;
-  padding-top: 64px; /* чтобы контент не подлезал под фикс-меню */
+  padding-top: 0;  /* было 64px */
 }
 
 a {
@@ -276,38 +278,43 @@ select option {
 }
 
 /* =========================
-   Top Navigation (fixed)
+   Top Navigation 
 ========================= */
 
+/* TOP NAV — scrolls away (not sticky), better spacing, language on opposite side */
 .topnav {
-  position: fixed;
-  top: 22px;
-  left: 22px;
-  width: auto;
-  display: flex;
-  justify-content: flex-start;
-  margin: 0;
-  z-index: 1000;
+  position: static;              /* было fixed -> теперь уезжает вверх при скролле */
+  width: 100%;
+  margin: 12px 0 18px 0;
+  z-index: auto;
+  display: block;
 }
 
 .topnav .nav-inner {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-start;
   align-items: center;
-  max-width: calc(100vw - 44px);
-
-  position: relative; /* anchor for absolute language widget */
+  justify-content: space-between; /* nav слева, язык справа */
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
-/* reserve space on right for lang buttons so it doesn't collide */
+/* больше не резервируем место — язык не absolute */
 .topnav .nav-inner--with-lang {
-  padding-right: 120px;
+  padding-right: 0;
 }
 
+/* левый блок ссылок */
+.topnav .nav-left {
+  display: flex;
+  gap: 3px;                     /* было 10 -> меньше “слипается” */
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* сами кнопки-ссылки */
 .topnav a {
-  padding: 10px 14px;
+  padding: 11px 16px;            /* чуть больше “воздуха” */
   border: 1px solid rgba(255, 255, 255, .15);
   border-radius: 999px;
   color: rgba(255, 255, 255, .78);
@@ -315,6 +322,8 @@ select option {
   background: rgba(255, 255, 255, .04);
   backdrop-filter: blur(10px);
   font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
 
   /* remove dotted underline for topnav links */
   border-bottom: none;
@@ -335,19 +344,15 @@ select option {
    Language switch (top-right utility)
 ========================= */
 
+/* language switch — lives naturally on the right side */
 .lang-switch {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 
-  padding: 6px;
+  padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 12px;              /* чуть менее “капсула” */
+  border-radius: 12px;
   background: rgba(255,255,255,.03);
 }
 
@@ -356,8 +361,8 @@ select option {
   align-items: center;
   justify-content: center;
 
-  min-width: 44px;
-  height: 30px;
+  min-width: 34px;
+  height: 20px;
   padding: 0 10px;
 
   border-radius: 9px;
