@@ -12,7 +12,6 @@ from app.core.settings import INQUIRIES_FILE, SELL_REQUESTS_FILE, DATA_DIR
 
 router = APIRouter()
 
-
 def render_request(
     request: Request,
     *,
